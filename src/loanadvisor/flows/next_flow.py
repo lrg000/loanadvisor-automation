@@ -63,7 +63,6 @@ def run_next_flow(driver):
     run_kyc_steps_from_route(driver, start_idx)
 
     run_apply_flow(driver)
-    
 
     time.sleep(5)
     db_result = verify_apply_db_fields()

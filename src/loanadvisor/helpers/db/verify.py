@@ -31,6 +31,67 @@ ALLURE_RESULTS_DIR = str(settings.allure_results_dir)
 ALLURE_REPORT_DIR = str(settings.allure_report_dir)
 _SCRIPT_DIR = str(settings.allure_results_dir.parent.parent)
 
+def _get_apply_customer_id():
+    storage = LOGIN_DATA.get("localStorage") or {}
+    base_info_raw = storage.get("BaseInfo") or storage.get("baseInfo")
+    if base_info_raw:
+        try:
+            customer_id = json.loads(base_info_raw).get("customerId")
+            if customer_id is not None:
+                return int(customer_id)
+        except Exception:
+            pass
+    user_code = storage.get("userCode")
+    if user_code:
+        return int(user_code)
+    return None
+
+
+def _get_apply_customer_mobile():
+    storage = LOGIN_DATA.get("localStorage") or {}
+    base_info_raw = storage.get("BaseInfo") or storage.get("baseInfo")
+    if base_info_raw:
+        try:
+            phone = json.loads(base_info_raw).get("phone")
+            if phone:
+                return str(phone).strip()
+        except Exception:
+            pass
+    return None
+
+
+def _apply_db_value_is_null(value):
+    if value is None:
+        return True
+    if isinstance(value, str) and value.strip() == "":
+        return True
+    return False
+
+
+def _fetch_apply_db_row(cursor, table, fields, customer_id, customer_mobile):
+    cols = ", ".join(fields)
+    if table == "customer":
+        cursor.execute(
+            f"SELECT {cols} FROM customer WHERE id = %s LIMIT 1",
+            (customer_id,),
+        )
+        row = cursor.fetchone()
+        if row is None and customer_mobile:
+            cursor.execute(
+                f"SELECT {cols} FROM customer WHERE customer_mobile = %s LIMIT 1",
+                (customer_mobile,),
+            )
+            row = cursor.fetchone()
+        return row
+
+    # 设备信息等可能有多条记录或异步补写，取 customer_id 下最新一条
+    cursor.execute(
+        f"SELECT {cols} FROM {table} WHERE customer_id = %s ORDER BY id DESC LIMIT 1",
+        (customer_id,),
+    )
+    return cursor.fetchone()
+
+
 def verify_apply_db_fields(max_retries=15, retry_interval=5):
     """基本信息提交后：验证各表关键字段不为 NULL，返回验证结果供 Allure 报告使用"""
     customer_id = _get_apply_customer_id()

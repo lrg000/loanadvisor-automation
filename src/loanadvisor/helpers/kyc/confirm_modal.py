@@ -1058,3 +1058,4 @@ def h5_fill_kyc_confirm_form(driver, full_name=None, date_of_birth=None, pan_num
         driver.save_screenshot("kyc_confirm_incomplete.png")
         print("⚠️ Confirm your info 表单未全部完成")
     return ready
+

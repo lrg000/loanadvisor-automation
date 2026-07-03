@@ -351,6 +351,70 @@ def _native_complete_photo_selection(driver, prefer_files=True):
     return _native_pick_gallery_photo(driver, index=0, timeout=18)
 
 
+def _h5_aadhaar_ocr_preview_ready(driver):
+    """Aadhaar OCR 拍照/选图完成后的 H5 预览页（可见 Submit）"""
+    try:
+        ensure_kyc_webview(driver, timeout=5)
+        return bool(
+            driver.execute_script(
+                """
+                const body = document.body.innerText || '';
+                if (!body.includes('Submit')) return false;
+                if (body.includes('Allow Camera Access') && !body.includes('Retake')) {
+                    return false;
+                }
+                for (const el of document.querySelectorAll('button, [role=button], div, span, a')) {
+                    const t = (el.innerText || '').trim();
+                    if (t !== 'Submit') continue;
+                    const r = el.getBoundingClientRect();
+                    if (r.width > 40 && r.height > 18 && r.top >= 0 && r.top < innerHeight) {
+                        return true;
+                    }
+                }
+                return false;
+                """
+            )
+        )
+    except Exception:
+        return False
+
+
+def _wait_for_aadhaar_photo_ready(driver, timeout=300, poll_interval=2.0, manual_hint=True):
+    """
+    等待 Aadhaar 拍照/选图完成（自动失败后的人工兜底）。
+    成功条件：回到 WebView 且预览页 Submit 可见。
+    """
+    if _h5_aadhaar_ocr_preview_ready(driver):
+        print("✅ 已在 Aadhaar 预览页")
+        return True
+
+    if manual_hint:
+        print(
+            "⚠️ 自动拍照/选图未完成，请在手机上人工完成拍照或从相册选图。"
+            f"脚本将等待最多 {int(timeout)} 秒，完成后自动继续 Submit..."
+        )
+        driver.save_screenshot("kyc_photo_manual_wait.png")
+
+    end_time = time.time() + timeout
+    last_log = 0.0
+    while time.time() < end_time:
+        handle_permission_popup(driver, timeout=1)
+
+        if _h5_aadhaar_ocr_preview_ready(driver):
+            print("✅ 检测到预览页 Submit，拍照/选图已完成（含人工操作）")
+            return True
+
+        now = time.time()
+        if now - last_log >= 15:
+            remaining = max(0, int(end_time - now))
+            print(f"⏳ 等待人工完成拍照/选图... 剩余约 {remaining} 秒")
+            last_log = now
+
+        time.sleep(poll_interval)
+
+    return False
+
+
 def h5_wait_and_click_submit(driver, timeout=45):
     """等待 OCR 预览页 Submit 按钮并点击"""
     ensure_kyc_webview(driver, timeout=10)

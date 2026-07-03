@@ -47,6 +47,7 @@ class Settings:
     kyc_ocr_pan = os.getenv("KYC_OCR_PAN", "ABCDE1234F")
     kyc_bank_ifsc = os.getenv("KYC_BANK_IFSC", "SBIN0010913")
     kyc_bank_account = os.getenv("KYC_BANK_ACCOUNT", "1234567890")
+    kyc_photo_manual_wait_sec = int(os.getenv("KYC_PHOTO_MANUAL_WAIT_SEC", "300"))
 
     db_config = {
         "host": os.getenv("DB_HOST", "rm-bp18jbr0c2dj6cc34oo.rwlb.rds.aliyuncs.com"),
