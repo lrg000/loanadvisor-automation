@@ -1,0 +1,10 @@
+# Loan Advisor E2E — runtime deps (aligned with pyproject.toml)
+# Install: pip install -r requirements.txt && pip install -e .
+
+Appium-Python-Client>=4.1.0,<6
+selenium>=4.15.0,<5
+pymysql>=1.1.0,<2
+pytest>=8.0.0,<10
+allure-pytest>=2.13.0,<3
+requests>=2.31.0,<3
+python-dotenv>=1.0.0,<2
