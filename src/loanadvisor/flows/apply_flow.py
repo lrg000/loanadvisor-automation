@@ -26,17 +26,21 @@ from loanadvisor.core.login_session import LOGIN_DATA
 from loanadvisor.helpers.native.permissions import handle_all_permission_popups
 from loanadvisor.helpers.webview.clicks import wait_for_h5_text
 from loanadvisor.helpers.webview.h5 import h5_click_success_confirm
+from loanadvisor.helpers.webview.home_actions import click_home_apply_if_needed
 from loanadvisor.helpers.webview.settings import handle_app_usage_settings
 from loanadvisor.helpers.webview.switcher import switch_to_real_webview
 
 def run_apply_flow(driver):
     """
     Apply 状态：用户申请新贷款
-    权限弹窗 → Usage Access → Success 弹窗 Confirm
+    首页 Apply（若需要）→ 权限弹窗 → Usage Access → Success 弹窗 Confirm
     """
     print("=== 执行 Apply 流程 ===")
 
     time.sleep(2)
+
+    click_home_apply_if_needed(driver)
+
     handle_all_permission_popups(driver)
     handle_app_usage_settings(driver)
 

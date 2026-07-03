@@ -5,7 +5,7 @@
 - 原生登录（OTP）
 - **完整 KYC 链路**：Basic info → Reference Contacts → Aadhaar OCR → 静默活体 → 绑卡
 - **智能续跑**：按 WebView URL 后缀（`#/basicInfo`、`#/identity` 等）自动跳过已完成步骤
-- 分支流程：Next / Go to repay / Apply
+- 分支流程：Next / Go to repay / Apply（含可选营销弹窗 Close、KYC 后点 Apply）
 - MySQL 字段非空验证 + Allure 报告
 - **login_result.json** 会话落盘（供接口测试扩展）
 
@@ -33,7 +33,7 @@ loanadvisor_automation/
 │   │   └── apply_flow.py
 │   └── helpers/
 │       ├── native/             # 权限、smart_click、相机
-│       ├── webview/            # H5 表单、WebView 切换
+│       ├── webview/            # H5 表单、WebView 切换、home_actions 弹窗
 │       ├── kyc/                # ★ OCR 确认弹窗、原生拍照
 │       └── db/                 # MySQL 验证、Allure
 └── tests/                      # pytest e2e / api
@@ -49,7 +49,7 @@ loanadvisor_automation/
 | 4 | `#/face` | `fill_kyc_silent_liveness` |
 | 5 | `#/bank` | `fill_kyc_bank_account_form` |
 
-`run_next_flow` 在 **Begin Verification** 后读取当前 URL 后缀，从对应步骤续跑至绑卡，再执行 `run_apply_flow` 与 DB 验证。
+`run_next_flow` 在 **Begin Verification** 后读取当前 URL 后缀，从对应步骤续跑至绑卡，再由 `click_home_apply_if_needed` 关弹窗并点击 **Apply**，最后 `run_apply_flow` 与 DB 验证。
 
 ## 快速开始
 
@@ -80,6 +80,7 @@ python run.py
 | `LOGIN_OTP` | OTP | `123456` |
 | `KYC_OCR_DOB` / `KYC_OCR_PAN` | OCR 确认页 | 见 env.example |
 | `KYC_BANK_IFSC` / `KYC_BANK_ACCOUNT` | 绑卡 | 见 env.example |
+| `KYC_PHOTO_MANUAL_WAIT_SEC` | Aadhaar 人工拍照等待 | `300` |
 | `DB_*` | MySQL 验证 | 见 env.example |
 
 ## Jenkins
@@ -101,10 +102,11 @@ python run.py
 python scripts/split_from_backup.py
 ```
 
-会重新生成 `helpers/` 与 `flows/` 下各模块（**保留** 手写的 `kyc_router.py`）。同步后请检查：
+会重新生成 `helpers/` 与 `flows/` 下各模块（**保留** 手写的 `kyc_router.py`、`flows/dispatcher.py` 由脚本 patch）。同步后请检查：
 
 - `helpers/kyc/shared.py` 中 `KYC_*_TEST_DATA` 是否仍指向 `settings`
 - `flows/next_flow.py` 是否使用 `get_h5_route_suffix` / `resolve_kyc_start_index`
+- `helpers/webview/home_actions.py` 是否包含弹窗 Close 与 `click_home_apply_if_needed`
 
 ## Pytest
 
@@ -119,4 +121,4 @@ pytest tests -m api -v
 - `reports/allure-results/` — DB 验证 Allure 原始数据
 - `kyc_*.png`、`after_*.png` — 流程截图（Jenkins 归档）
 
-详细业务流程见上级目录：`appium自动化测试_业务说明.md`
+详细业务流程见：[`docs/BUSINESS_FLOW.md`](docs/BUSINESS_FLOW.md)（与上级目录 `appium自动化测试_业务说明.md` 同步）

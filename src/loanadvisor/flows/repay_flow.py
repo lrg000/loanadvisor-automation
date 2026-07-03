@@ -29,6 +29,7 @@ from loanadvisor.helpers.webview.h5 import (
     h5_click_repay_loan_button,
     h5_repay_details_visible,
 )
+from loanadvisor.helpers.webview.home_actions import dismiss_optional_home_loan_popup
 from loanadvisor.helpers.webview.settings import handle_browser_chooser_if_present
 from loanadvisor.helpers.webview.switcher import switch_to_real_webview
 
@@ -46,6 +47,8 @@ def run_go_to_repay_flow(driver):
         switch_to_real_webview(driver, timeout=15)
     except Exception as e:
         print("WebView 切换跳过:", e)
+
+    dismiss_optional_home_loan_popup(driver)
 
     if not wait_for_h5_text(driver, "Repay Loan", timeout=15):
         print("⚠️ 未检测到 Repay Loan，当前页面片段:")

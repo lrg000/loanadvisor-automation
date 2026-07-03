@@ -31,9 +31,11 @@ from loanadvisor.helpers.kyc.confirm_modal import (
 )
 from loanadvisor.helpers.kyc.shared import (
     KYC_OCR_TEST_DATA,
+    _h5_aadhaar_ocr_preview_ready,
     _kyc_navigate_to_aadhaar_upload,
     _kyc_trigger_camera_allow,
     _native_complete_photo_selection,
+    _wait_for_aadhaar_photo_ready,
     ensure_kyc_webview,
     generate_valid_pan,
     h5_wait_and_click_submit,
@@ -41,7 +43,7 @@ from loanadvisor.helpers.kyc.shared import (
 )
 from loanadvisor.helpers.native.permissions import handle_permission_popup
 from loanadvisor.helpers.webview.clicks import wait_for_h5_text
-from loanadvisor.helpers.webview.h5 import h5_click_bottom_button, h5_click_form_next
+from loanadvisor.helpers.webview.h5 import h5_click_bottom_button, h5_click_form_next, h5_click_modal_button
 from loanadvisor.helpers.webview.switcher import switch_to_real_webview
 
 def fill_kyc_aadhaar_ocr(
@@ -54,6 +56,9 @@ def fill_kyc_aadhaar_ocr(
     """
     KYC 身份验证 OCR 流程（Aadhaar 正面）
     Identity Verification → Next → Next → Allow → 拍照/选图 → Submit → 确认信息 → Next
+
+    拍照/选图失败时进入人工等待（默认最多 300 秒，可通过 KYC_PHOTO_MANUAL_WAIT_SEC 调整），
+    检测到预览页 Submit 后自动继续后续 Submit 与表单填写。
     """
     print("=== 开始 KYC Aadhaar OCR 身份验证 ===")
 
@@ -75,9 +80,24 @@ def fill_kyc_aadhaar_ocr(
 
     handle_permission_popup(driver, timeout=8)
 
-    if not _native_complete_photo_selection(driver, prefer_files=prefer_files):
-        driver.save_screenshot("kyc_photo_fail.png")
-        raise TimeoutException("拍照/选图失败")
+    manual_wait_sec = settings.kyc_photo_manual_wait_sec
+    if _h5_aadhaar_ocr_preview_ready(driver):
+        print("⏭️ 已在 Aadhaar 预览页，跳过拍照/选图")
+    else:
+        photo_ok = _native_complete_photo_selection(
+            driver, prefer_files=prefer_files
+        )
+        if not photo_ok:
+            driver.save_screenshot("kyc_photo_fail.png")
+            print("⚠️ 自动拍照/选图失败，进入人工等待模式...")
+            photo_ok = _wait_for_aadhaar_photo_ready(
+                driver, timeout=manual_wait_sec, manual_hint=True
+            )
+        if not photo_ok:
+            driver.save_screenshot("kyc_photo_manual_timeout.png")
+            raise TimeoutException(
+                "拍照/选图失败（自动操作与人工等待均未完成）"
+            )
 
     ensure_kyc_webview(driver, timeout=15)
     driver.save_screenshot("kyc_step2_preview.png")
@@ -126,4 +146,3 @@ def fill_kyc_aadhaar_ocr(
     time.sleep(2)
     driver.save_screenshot("kyc_step4_after_next.png")
     print("✅ KYC Aadhaar OCR 身份验证完成")
-

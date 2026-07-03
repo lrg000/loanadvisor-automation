@@ -351,4 +351,3 @@ def fill_kyc_bank_account_form(
     driver.save_screenshot("kyc_bank_after_next.png")
     print("✅ KYC 绑卡页面提交完成")
     return True
-
